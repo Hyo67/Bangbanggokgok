@@ -37,7 +37,7 @@ erDiagram
 | `title` | text | NO | | 1~20자 (CHECK) |
 | `currency_code` | text | NO | | 여행지 통화 (THB, JPY …) |
 | `fixed_exchange_rate` | numeric | YES | | 원화 / 현지 통화 1단위. 생성 시 1회 고정, 조회 실패 시 NULL |
-| `rate_date` | date | YES | | 고정 환율의 고시일 |
+| `rate_date` | date | YES | | 환율을 고정한 날 (한국 시각) |
 | `rate_sample` | boolean | NO | `false` | 샘플 여행방의 임의 환율 여부 |
 | `start_date` | date | NO | | 여행 시작일 |
 | `end_date` | date | NO | | 여행 종료일. `end_date >= start_date` (CHECK) |
@@ -264,10 +264,10 @@ erDiagram
 
 | 다이어그램 | 실제 | |
 | --- | --- | --- |
-| Currency 클래스 (currencyCode, nationName, currencyRate) | **DB 테이블 없음** | ➖ 지원 통화 15개는 코드 상수 `CURRENCIES`(`shared/domain.ts`)에 있다 |
+| Currency 클래스 (currencyCode, nationName, currencyRate) | **DB 테이블 없음** | ➖ 지원 통화 15개는 코드 상수 `CURRENCIES`(`shared/domain.ts`)에 있다. currencyRate는 네이버 환율 검색으로 실시간 조회한다 |
 | Trip 0..* — 1 Currency | `trips.currency_code` | ➖ 외래 키도 CHECK도 없다. 서버가 `CURRENCIES`에 있는 코드인지 검사한다 |
 | currencyRate | `trips.fixed_exchange_rate` | 🔁 통화별 최신 환율을 저장하지 않고, 여행방마다 생성 시점 환율만 고정한다 (FR-3.1) |
-| ExchangeRateService.fetchRate(nationName) | `backend/currency/exchangeRateService.ts` | ✅ |
+| ExchangeRateService.fetchRate(nationName) | `backend/currency/exchangeRateService.ts` (네이버 환율 검색, 1분 캐시) | ✅ |
 
 ### 다중성(multiplicity)
 

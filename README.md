@@ -10,7 +10,7 @@
 | Frontend | Next.js (React, TypeScript) | Vercel |
 | Backend | Next.js Route Handlers (TypeScript) | Vercel |
 | Database | PostgreSQL | Supabase |
-| 외부 API | 한국수출입은행 현재환율 API | — |
+| 외부 API | 네이버 환율 검색 (비공식 엔드포인트) | — |
 
 ## 실행
 
@@ -18,28 +18,29 @@ Node.js 20.12 이상이 필요하다.
 
 ```bash
 npm install
-cp .env.example .env   # EXIM_API_KEY, DATABASE_URL 입력
+cp .env.example .env   # DATABASE_URL 입력
 npm run dev            # http://localhost:3000
 ```
 
 - `DATABASE_URL`을 비워 두면 로컬에서는 임베디드 Postgres(PGlite)가 `.pglite/` 폴더에 데이터를 저장한다. 스키마는 처음 실행할 때 `db/schema.sql`로 자동으로 만들어진다.
-- `EXIM_API_KEY`가 없으면 여행방은 만들어지지만 고정 환율이 저장되지 않고, 화면에서 재시도를 안내한다. 키 없이 화면을 살펴보려면 첫 화면의 **샘플 여행방 둘러보기**를 쓴다(샘플 환율 ฿1 = 42원).
+- 환율은 인증키 없이 네이버 환율 검색에서 가져온다. 화면을 빠르게 살펴보려면 첫 화면의 **샘플 여행방 둘러보기**를 쓴다(샘플 환율 ฿1 = 42원).
 
 ## 배포 (Vercel + Supabase)
 
 1. Supabase **Connect → Transaction pooler** 연결 문자열(6543 포트)을 `.env`의 `DATABASE_URL`에 넣는다. 비밀번호의 `[ ]`는 빼고, 특수문자는 URL 인코딩한다.
 2. `npm run db:migrate`로 `db/schema.sql`을 적용한다(SQL Editor에 붙여 넣어 실행해도 된다).
-3. Vercel에 이 저장소를 연결하고 환경 변수 `DATABASE_URL`, `EXIM_API_KEY`를 설정한다.
+3. Vercel에 이 저장소를 연결하고 환경 변수 `DATABASE_URL`을 설정한다.
 
 브라우저는 Supabase에 직접 접속하지 않는다. 모든 읽기·쓰기는 백엔드(Route Handlers)가 DB에 연결해 처리하며, 테이블에는 RLS를 켜 두어 공개 키로는 접근할 수 없다.
 
-## 환율 API 연결
+## 환율
 
-1. [한국수출입은행 Open API](https://www.koreaexim.go.kr/ir/HPHKIR020M01?apino=2&viewtype=C)에서 **현재환율** 인증키를 발급받는다.
-2. `.env`(로컬)와 Vercel 환경 변수에 `EXIM_API_KEY=<인증키>`를 넣고 서버를 다시 띄운다.
-3. 새 여행방을 만들면 그 순간의 매매 기준율이 `trips.fixed_exchange_rate`에 고정된다. 주말·공휴일이나 영업일 오전 11시 이전에는 직전 영업일 고시를 쓴다.
+인증키가 필요 없는 **네이버 환율 검색** 엔드포인트(`m.search.naver.com/p/csearch/content/qapirender.nhn`, 하나은행 고시 기준)를 쓴다.
 
-키가 없거나 조회에 실패하면 여행방은 환율 없이 만들어지고, 지출 기록 화면에서 **다시 시도**로 한 번 더 조회할 수 있다.
+- **고정 환율:** 여행방을 만드는 순간 한 번 조회해 `trips.fixed_exchange_rate`에 고정한다(FR-3.1). 지출의 원화 환산과 정산은 모두 이 값으로 계산한다. 조회에 실패하면 환율 없이 만들어지고, 지출 기록 화면의 **다시 시도**로 한 번 더 조회할 수 있다.
+- **실시간 환율:** `GET /api/rates/:currencyCode`로 보여 주기만 한다. 서버가 1분 동안 캐시한다. 여행방 만들기 화면에는 고정될 환율을, 여행방 정보 시트에는 고정 환율과 지금 환율을 함께 보여 준다.
+- **정밀도:** 1원 미만 통화(IDR 등)를 위해 100단위로 조회한 뒤 100으로 나눈다.
+- **주의:** 공식 API가 아니라서 응답 형식이 바뀌거나 막힐 수 있다. 그럴 때는 `backend/currency/exchangeRateService.ts`의 `queryNaver`만 고치면 된다.
 
 ## 구조 (모듈뷰 → 폴더)
 
@@ -83,7 +84,8 @@ User 모듈은 회원가입이 없으므로 서버에 계정을 두지 않고 �
 | POST | `/api/trips` | Trip.createTrip |
 | POST | `/api/trips/demo` | 샘플 여행방 |
 | GET | `/api/trips/:tripId[?v=버전]` (버전이 같으면 204) | 여행방 조회 |
-| POST | `/api/trips/:tripId/rate` | ExchangeRateService.fetchRate (재시도) |
+| POST | `/api/trips/:tripId/rate` | ExchangeRateService.fetchRate (고정 환율 재시도) |
+| GET | `/api/rates/:currencyCode` | ExchangeRateService.fetchRate (실시간 환율, 1분 캐시) |
 | POST | `/api/trips/:tripId/members` | Trip.addMember |
 | PATCH · DELETE | `/api/trips/:tripId/members/:memberId` | Member.updateName · Member.leaveTrip |
 | POST | `/api/trips/:tripId/categories` | Trip.addCategory |

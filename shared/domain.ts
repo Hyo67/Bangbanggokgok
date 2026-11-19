@@ -8,13 +8,13 @@ export interface Currency {
   currencyRate: number | null; // 원화 / 현지 통화 1단위
 }
 
-// 한국수출입은행 환율 API가 제공하는 통화만 선택지로 둔다.
+// 네이버 환율 검색으로 조회할 수 있는 통화만 선택지로 둔다.
 export const CURRENCIES: (Omit<Currency, 'currencyRate'> & { symbol: string })[] = [
   { currencyCode: 'THB', nationName: '태국', symbol: '฿' },
   { currencyCode: 'JPY', nationName: '일본', symbol: '¥' },
   { currencyCode: 'USD', nationName: '미국', symbol: '$' },
   { currencyCode: 'EUR', nationName: '유럽(유로존)', symbol: '€' },
-  { currencyCode: 'CNH', nationName: '중국', symbol: '¥' },
+  { currencyCode: 'CNY', nationName: '중국', symbol: '¥' },
   { currencyCode: 'HKD', nationName: '홍콩', symbol: 'HK$' },
   { currencyCode: 'SGD', nationName: '싱가포르', symbol: 'S$' },
   { currencyCode: 'MYR', nationName: '말레이시아', symbol: 'RM' },
@@ -134,7 +134,7 @@ export interface Trip {
   inviteLink: string;
   currencyCode: string;
   fixedExchangeRate: number | null;
-  rateDate: string | null; // 고정 환율의 고시일
+  rateDate: string | null; // 환율을 고정한 날 (한국 시각)
   rateSample: boolean; // 샘플 여행방의 임의 환율
   totalExpense: number | null; // 원화 환산 총지출. 환율이 없어 환산할 수 없는 지출이 있으면 null
   startDate: string;

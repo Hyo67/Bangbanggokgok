@@ -8,7 +8,7 @@ create table if not exists trips (
   title               text not null check (char_length(title) between 1 and 20),
   currency_code       text not null,
   fixed_exchange_rate numeric,                    -- 원화 / 현지 통화 1단위, 생성 시 1회 고정
-  rate_date           date,
+  rate_date           date,                        -- 환율을 고정한 날 (한국 시각)
   rate_sample         boolean not null default false,
   start_date          date not null,
   end_date            date not null,

@@ -9,11 +9,13 @@ export const won = (n: number) => `${Math.round(n).toLocaleString('ko-KR')}원`;
 export const localMoney = (trip: Trip, amount: number, currency: string) =>
   currency === 'KRW' ? won(amount) : `${currencyOf(trip.currencyCode).symbol}${amount.toLocaleString('ko-KR', { maximumFractionDigits: 2 })}`;
 
-export const rateText = (trip: Trip) => {
-  const rate = trip.fixedExchangeRate ?? 0;
+// ฿1 = 39.14원 형식. 1원 미만 통화(IDR 등)도 유효숫자 4자리까지 보여 준다.
+export const rateLabel = (currencyCode: string, rate: number) => {
   const opts = rate >= 100 ? { maximumFractionDigits: 2 } : { maximumSignificantDigits: 4 };
-  return `${currencyOf(trip.currencyCode).symbol}1 = ${rate.toLocaleString('ko-KR', opts)}원`;
+  return `${currencyOf(currencyCode).symbol}1 = ${rate.toLocaleString('ko-KR', opts)}원`;
 };
+
+export const rateText = (trip: Trip) => rateLabel(trip.currencyCode, trip.fixedExchangeRate ?? 0);
 
 export const parseAmount = (str: string) => Number(String(str).replace(/,/g, '').trim());
 

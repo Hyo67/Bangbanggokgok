@@ -89,7 +89,7 @@ export async function createTrip(body: Body) {
     await tx.query(
       `insert into trips (trip_id, title, currency_code, fixed_exchange_rate, rate_date, start_date, end_date)
        values ($1, $2, $3, $4, $5, $6, $7)`,
-      [tripId, title, body.currencyCode, rate?.currencyRate ?? null, rate?.rateDate ?? null, startDate, endDate],
+      [tripId, title, body.currencyCode, rate?.currencyRate ?? null, rate ? kstDate() : null, startDate, endDate],
     );
     await createDefaultCategories(tx, tripId);
     return addMember(tx, tripId, body.myName);

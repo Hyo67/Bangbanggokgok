@@ -5,9 +5,10 @@
 import { useState, type FormEvent } from 'react';
 import { currencyOf } from '@/shared/domain';
 import { errorText } from '../common/api';
-import { fmtDate, rateText } from '../common/format';
+import { fmtDate, rateLabel, rateText } from '../common/format';
 import { Icon } from '../common/Icon';
 import { SheetHead, useSheet, useToast } from '../common/overlay';
+import { useLiveRate } from '../currency/useLiveRate';
 import { NameGate } from '../user/NameGate';
 import { copyShareLink, shareUrl } from './share';
 import { useTrip } from './TripContext';
@@ -19,6 +20,7 @@ export function TripInfoSheet({ close, created = false }: { close(): void; creat
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState('');
   const currency = currencyOf(trip.currencyCode);
+  const live = useLiveRate(trip.currencyCode);
 
   async function rename(e: FormEvent) {
     e.preventDefault();
@@ -81,12 +83,27 @@ export function TripInfoSheet({ close, created = false }: { close(): void; creat
             ) : (
               <>
                 {rateText(trip)}{' '}
-                {trip.rateSample ? <span className="badge">샘플</span> : <small>{fmtDate(trip.rateDate!)} 고시 기준</small>}
+                {trip.rateSample ? <span className="badge">샘플</span> : <small>{fmtDate(trip.rateDate!)} 고정</small>}
               </>
             )}
           </dd>
         </div>
+        <div>
+          <dt>실시간 환율</dt>
+          <dd>
+            {live.status === 'ok' ? (
+              <>
+                {rateLabel(trip.currencyCode, live.rate)} <small>네이버 기준</small>
+              </>
+            ) : live.status === 'loading' ? (
+              '불러오는 중…'
+            ) : (
+              '불러오지 못했어요'
+            )}
+          </dd>
+        </div>
       </dl>
+      <p className="fine">지출 환산과 정산에는 여행방을 만들 때 고정한 환율을 써요. 실시간 환율은 참고용이에요.</p>
       <h3>멤버 {trip.members.length}명</h3>
       <div className="chips">
         {trip.members.map((m) => (

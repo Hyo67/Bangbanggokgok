@@ -7,9 +7,10 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, type FormEvent } from 'react';
 import { CURRENCIES, type Trip } from '@/shared/domain';
 import { api, errorText } from '../common/api';
-import { addDays, today } from '../common/format';
+import { addDays, rateLabel, today } from '../common/format';
 import { Bird, Icon } from '../common/Icon';
 import { useToast } from '../common/overlay';
+import { useLiveRate } from '../currency/useLiveRate';
 import { markJustCreated, recentTrips, saveMe, type RecentTrip } from '../user/userService';
 
 interface Created {
@@ -30,6 +31,8 @@ export function LandingView() {
     endDate: addDays(today(), 4),
     myName: '',
   }));
+
+  const live = useLiveRate(form.currencyCode);
 
   useEffect(() => setRecent(recentTrips()), []);
 
@@ -108,7 +111,17 @@ export function LandingView() {
           </span>
           <input name="myName" placeholder="내 이름" maxLength={12} autoComplete="off" value={form.myName} onChange={set('myName')} />
         </label>
-        <p className="hint">환율은 여행방을 만드는 순간의 한국수출입은행 고시 환율로 고정돼요.</p>
+        <p className="hint">
+          {live.status === 'ok' ? (
+            <>
+              <b>지금 {rateLabel(form.currencyCode, live.rate)}</b> · 만드는 순간의 환율로 여행 내내 고정돼요.
+            </>
+          ) : live.status === 'loading' ? (
+            '실시간 환율을 불러오는 중이에요…'
+          ) : (
+            '실시간 환율을 불러오지 못했어요. 만든 뒤에 다시 시도할 수 있어요.'
+          )}
+        </p>
         <button className="btn primary block" disabled={busy}>
           여행방 만들기
         </button>
