@@ -74,7 +74,10 @@ export function RecordView() {
       <div className="hero">
         <Bird />
         <header className="rec-head">
-          <div>
+          <Link className="round rec-back" href="/" aria-label="여행방 만들기로 돌아가기" title="여행방 만들기">
+            <Icon name="back" />
+          </Link>
+          <div className="rec-title">
             <button type="button" className="trip-title" onClick={() => sheet.open((close) => <TripInfoSheet close={close} />)}>
               {trip.title} <Icon name="down" size={20} />
             </button>

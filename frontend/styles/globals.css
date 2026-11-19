@@ -250,7 +250,9 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
 
 /* ---------- 지출 기록 ---------- */
 
-.rec-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.rec-head { display: flex; align-items: flex-start; gap: 10px; }
+.rec-title { flex: 1; min-width: 0; }
+.rec-back { width: 42px; height: 42px; margin-top: -1px; }
 .trip-title { display: inline-flex; align-items: center; gap: 4px; font-size: 26px; font-weight: 800; text-align: left; }
 .trip-dates { margin-top: 2px; font-size: 14px; color: var(--ink-2); }
 .head-actions { display: flex; gap: 8px; }
