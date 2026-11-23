@@ -117,18 +117,16 @@ export function Icon({ name, size = 22 }: { name: IconName; size?: number }) {
 // 마스코트 까치 (public/bird.svg)
 export const Bird = () => <img className="bird" src="/bird.svg" alt="" />;
 
-const DEFAULT_LOOKS: Record<DefaultCategoryType, { icon: IconName; tone: string }> = {
-  FOOD: { icon: 'food', tone: 'yellow' },
-  TRANSPORT: { icon: 'transport', tone: 'blue' },
-  ACCOMMODATION: { icon: 'accommodation', tone: 'pink' },
-  SHOPPING: { icon: 'shopping', tone: 'green' },
-  ETC: { icon: 'etc', tone: 'lilac' },
+const DEFAULT_ICONS: Record<DefaultCategoryType, IconName> = {
+  FOOD: 'food',
+  TRANSPORT: 'transport',
+  ACCOMMODATION: 'accommodation',
+  SHOPPING: 'shopping',
+  ETC: 'etc',
 };
-const CUSTOM_TONES = ['yellow', 'blue', 'pink', 'green', 'lilac'];
 
-// 카테고리 아이콘과 색. 사용자가 만든 카테고리는 태그 아이콘에 색을 돌려 가며 쓴다.
-export function categoryLook(c: TripCategory | undefined): { icon: IconName; tone: string } {
+// 카테고리 아이콘. 사용자가 만든 카테고리는 태그 아이콘을 쓴다.
+export function categoryLook(c: TripCategory | undefined): { icon: IconName } {
   const type = c && defaultTypeOf(c);
-  if (type) return DEFAULT_LOOKS[type];
-  return { icon: 'tag', tone: CUSTOM_TONES[(c?.sortOrder ?? 0) % CUSTOM_TONES.length] };
+  return { icon: type ? DEFAULT_ICONS[type] : 'tag' };
 }

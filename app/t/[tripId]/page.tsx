@@ -1,6 +1,4 @@
-import { ListView } from '@/frontend/expense/ListView';
-
-// 지출 기록(첫 화면). 기록 화면은 레이아웃에 있고, 넓은 화면의 옆자리에는 지출 내역을 둔다.
+// 여행방 메인 화면. 기록과 지출 내역은 레이아웃(TripShell)에 붙어 있어 여기서는 그릴 것이 없다.
 export default function Page() {
-  return <ListView />;
+  return null;
 }

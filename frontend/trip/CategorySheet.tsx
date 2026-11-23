@@ -52,8 +52,8 @@ export function CategorySheet({ close }: { close(): void }) {
           return (
             <li key={c.categoryId}>
               <span className="row-label">
-                <span className={`cat-ic sm tone-${look.tone}`}>
-                  <Icon name={look.icon} size={20} />
+                <span className="cat-ic sm">
+                  <Icon name={look.icon} size={18} />
                 </span>
                 {c.name}
               </span>

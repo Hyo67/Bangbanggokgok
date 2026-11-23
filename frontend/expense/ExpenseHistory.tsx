@@ -1,19 +1,21 @@
 'use client';
 
-// 지출 내역 화면 — 조회, 수정·삭제·순서 변경, 정산할 항목 선택
+// 지출 내역 — 기록 카드 아래에 이어지는 요약과 날짜별 목록. 수정·삭제·순서 변경, 정산할 항목 선택
 
 import { convertToKRW, type Expense } from '@/shared/domain';
 import type { KeyboardEvent } from 'react';
 import { errorText } from '../common/api';
 import { fmtDate, localMoney, sum, won } from '../common/format';
-import { Bird, categoryLook, Icon } from '../common/Icon';
+import { categoryLook, Icon } from '../common/Icon';
 import { SheetHead, useSheet, useToast } from '../common/overlay';
 import { SettleCreateSheet } from '../settlement/SettleCreateSheet';
-import { SubHeader } from '../trip/SubHeader';
 import { useTrip } from '../trip/TripContext';
 import { ExpenseEditSheet } from './ExpenseEditSheet';
 
-export function ListView() {
+// 카테고리 비중 막대의 회색 단계 수 (globals.css의 .shade-*)
+const SHADES = 5;
+
+export function ExpenseHistory() {
   const { trip, memberName, categoryOf, mutate, selection, setSelection, filter, setFilter } = useTrip();
   const sheet = useSheet();
   const toast = useToast();
@@ -29,7 +31,7 @@ export function ListView() {
   const dates = [...groups.keys()].sort().reverse();
 
   const byCat = trip.categories
-    .map((c) => ({ c, look: categoryLook(c), krw: sum(trip.expenses.filter((e) => e.categoryId === c.categoryId).map(krwOf)) }))
+    .map((c) => ({ c, krw: sum(trip.expenses.filter((e) => e.categoryId === c.categoryId).map(krwOf)) }))
     .filter((x) => x.krw > 0);
   const allKrw = sum(byCat.map((x) => x.krw));
   const picked = selection ? trip.expenses.filter((e) => selection.has(e.expenseId)) : [];
@@ -127,9 +129,9 @@ export function ListView() {
         onClick={() => (locked ? undefined : selection ? toggle(e.expenseId) : edit(e.expenseId))}
         onKeyDown={onRowKey}
       >
-        {selection && <span className="tick">{isPicked && <Icon name="check" size={16} />}</span>}
-        <span className={`cat-ic sm tone-${look.tone}`}>
-          <Icon name={look.icon} size={20} />
+        {selection && <span className="tick">{isPicked && <Icon name="check" size={14} />}</span>}
+        <span className="cat-ic sm">
+          <Icon name={look.icon} size={18} />
         </span>
         <div className="exp-main">
           <strong>
@@ -159,10 +161,9 @@ export function ListView() {
   };
 
   return (
-    <>
-      <SubHeader active="list" />
-      <section className="total-card">
-        <div>
+    <section id="history" className="history" aria-label="지출 내역">
+      <div className="summary">
+        <p className="sum-line">
           <span>{filter === 'all' ? '총 지출' : `${categoryOf(filter)?.name} 지출`}</span>
           <strong>
             {filter === 'all'
@@ -174,40 +175,47 @@ export function ListView() {
                 : won(sum(shown.map(krwOf)))}
           </strong>
           {totalLocal > 0 && <small>{localMoney(trip, totalLocal, trip.currencyCode)}</small>}
-        </div>
+        </p>
         {allKrw > 0 && (
           <div className="mix">
             <div className="mix-bar">
-              {byCat.map((x) => (
-                <i key={x.c.categoryId} className={`tone-${x.look.tone}`} style={{ flex: x.krw }} />
+              {byCat.map((x, i) => (
+                <i key={x.c.categoryId} className={`shade-${i % SHADES}`} style={{ flex: x.krw }} />
               ))}
             </div>
             <ul>
-              {byCat.map((x) => (
+              {byCat.map((x, i) => (
                 <li key={x.c.categoryId}>
-                  <i className={`tone-${x.look.tone}`} />
+                  <i className={`shade-${i % SHADES}`} />
                   {x.c.name} {Math.round((x.krw / allKrw) * 100)}%
                 </li>
               ))}
             </ul>
           </div>
         )}
-      </section>
-      <div className="pills" role="tablist" aria-label="카테고리 필터">
-        {[{ categoryId: 'all', name: '전체' }, ...trip.categories].map((c) => (
-          <button
-            key={c.categoryId}
-            type="button"
-            className={`pill ${filter === c.categoryId ? 'on' : ''}`}
-            role="tab"
-            aria-selected={filter === c.categoryId}
-            onClick={() => setFilter(c.categoryId)}
-          >
-            {c.name}
-          </button>
-        ))}
       </div>
-      {selection && <p className="select-tip">정산할 내역을 눌러서 골라 주세요. 이미 정산 요청된 내역은 고를 수 없어요.</p>}
+      <div className="list-bar">
+        <div className="pills" role="tablist" aria-label="카테고리 필터">
+          {[{ categoryId: 'all', name: '전체' }, ...trip.categories].map((c) => (
+            <button
+              key={c.categoryId}
+              type="button"
+              className={`pill ${filter === c.categoryId ? 'on' : ''}`}
+              role="tab"
+              aria-selected={filter === c.categoryId}
+              onClick={() => setFilter(c.categoryId)}
+            >
+              {c.name}
+            </button>
+          ))}
+        </div>
+        {!selection && trip.expenses.length > 0 && (
+          <button type="button" className="pill settle-pick" onClick={() => setSelection(new Set())}>
+            정산
+          </button>
+        )}
+      </div>
+      {selection && <p className="select-tip">정산할 내역을 골라 주세요. 이미 정산 요청된 내역은 고를 수 없어요.</p>}
       {dates.length ? (
         dates.map((date) => (
           <section key={date} className="day">
@@ -215,25 +223,13 @@ export function ListView() {
               <span>{fmtDate(date, 'long')}</span>
               <span>{pending ? '' : won(sum(groups.get(date)!.map(krwOf)))}</span>
             </h2>
-            <ul className="card exp-list">{groups.get(date)!.map(row)}</ul>
+            <ul className="exp-list">{groups.get(date)!.map(row)}</ul>
           </section>
         ))
       ) : (
-        <div className="empty">
-          <Bird />
-          <p>
-            {trip.expenses.length ? (
-              '이 카테고리에는 아직 내역이 없어요.'
-            ) : (
-              <>
-                아직 기록한 지출이 없어요.
-                <br />첫 지출을 추가해 보세요!
-              </>
-            )}
-          </p>
-        </div>
+        <p className="empty">{trip.expenses.length ? '이 카테고리에는 아직 내역이 없어요.' : '아직 기록한 지출이 없어요.'}</p>
       )}
-      {selection ? (
+      {selection && (
         <div className="select-bar">
           <button type="button" className="btn ghost sm" onClick={() => setSelection(null)}>
             취소
@@ -246,14 +242,7 @@ export function ListView() {
             정산하기
           </button>
         </div>
-      ) : (
-        trip.expenses.length > 0 && (
-          <button type="button" className="fab fab-settle" aria-label="정산할 내역 고르기" onClick={() => setSelection(new Set())}>
-            <b>₩</b>
-            <span>정산</span>
-          </button>
-        )
       )}
-    </>
+    </section>
   );
 }

@@ -1,19 +1,20 @@
 'use client';
 
-// 지출 기록 화면 — 공유 링크로 들어오면 가장 먼저 보이는 화면.
-// 넓은 화면에서는 서브 화면 옆에 계속 떠 있으므로 입력 중인 값이 화면 이동에도 유지된다.
+// 여행방 메인 화면 — 위에서 새 지출을 기록하고, 아래로 스크롤하면 요약과 지난 내역이 이어진다.
+// 정산 화면으로 갔다 와도 입력 중인 값이 남도록 레이아웃에 계속 붙어 있다.
 
 import Link from 'next/link';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { currencyOf } from '@/shared/domain';
 import { errorText } from '../common/api';
 import { fmtDate, today } from '../common/format';
-import { Bird, Icon } from '../common/Icon';
+import { Icon } from '../common/Icon';
 import { useSheet, useToast } from '../common/overlay';
 import { copyShareLink } from '../trip/share';
 import { useTrip } from '../trip/TripContext';
 import { TripInfoSheet } from '../trip/TripInfoSheet';
 import { ExpenseFields, validateDraft, type ExpenseDraft } from './ExpenseFields';
+import { ExpenseHistory } from './ExpenseHistory';
 
 export function RecordView() {
   const { trip, me, mutate, path } = useTrip();
@@ -71,50 +72,44 @@ export function RecordView() {
 
   return (
     <>
-      <div className="hero">
-        <Bird />
-        <header className="rec-head">
-          <Link className="round rec-back" href="/" aria-label="여행방 만들기로 돌아가기" title="여행방 만들기">
-            <Icon name="back" />
-          </Link>
-          <div className="rec-title">
-            <button type="button" className="trip-title" onClick={() => sheet.open((close) => <TripInfoSheet close={close} />)}>
-              {trip.title} <Icon name="down" size={20} />
-            </button>
-            <p className="trip-dates">
-              {fmtDate(trip.startDate)} - {fmtDate(trip.endDate)} · {currencyOf(trip.currencyCode).nationName}
-            </p>
-          </div>
-          <div className="head-actions">
-            <button type="button" className="round" onClick={() => copyShareLink(trip, toast)} aria-label="초대 링크 복사" title="초대 링크 복사">
-              <Icon name="link" />
-            </button>
-          </div>
-        </header>
-      </div>
+      <header className="rec-head">
+        <Link className="round" href="/" aria-label="여행방 만들기로 돌아가기" title="여행방 만들기">
+          <Icon name="back" />
+        </Link>
+        <div className="rec-title">
+          <button type="button" className="trip-title" onClick={() => sheet.open((close) => <TripInfoSheet close={close} />)}>
+            {trip.title} <Icon name="down" size={16} />
+          </button>
+          <p className="trip-dates">
+            {fmtDate(trip.startDate)} - {fmtDate(trip.endDate)} · {currencyOf(trip.currencyCode).nationName}
+          </p>
+        </div>
+        <Link className="round" href={path('settle')} aria-label="정산 요청 보기" title="정산 요청">
+          <Icon name="receipt" />
+        </Link>
+        <button type="button" className="round" onClick={() => copyShareLink(trip, toast)} aria-label="초대 링크 복사" title="초대 링크 복사">
+          <Icon name="link" />
+        </button>
+      </header>
       {trip.fixedExchangeRate == null && (
         <div className="banner">
           <p>
             <b>고정 환율이 아직 저장되지 않았어요.</b>
             <br />
-            기록은 할 수 있지만 원화 환산은 환율을 저장한 뒤에 표시돼요.
+            원화 환산은 환율을 저장한 뒤에 표시돼요.
           </p>
           <button type="button" className="btn primary sm" onClick={retryRate}>
-            <Icon name="refresh" size={18} /> 다시 시도
+            <Icon name="refresh" size={16} /> 다시 시도
           </button>
         </div>
       )}
-      <form ref={form} className="card rec-form" noValidate onSubmit={submit}>
+      <form ref={form} className="rec-form" noValidate onSubmit={submit}>
         <ExpenseFields draft={draft} onChange={setDraft} />
-        <div className="rec-bottom">
-          <Link className="fab fab-list" href={path('list')} aria-label="지출 내역 보기" title="지출 내역 보기">
-            <Icon name="list" size={26} />
-          </Link>
-          <button className="btn primary block" disabled={busy}>
-            추가하기
-          </button>
-        </div>
+        <button className="btn primary block" disabled={busy}>
+          추가하기
+        </button>
       </form>
+      <ExpenseHistory />
     </>
   );
 }

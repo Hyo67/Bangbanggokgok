@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { convertToKRW, type Settlement, type SettlementStatus, type SettlementTarget } from '@/shared/domain';
 import { errorText } from '../common/api';
 import { fmtDate, won } from '../common/format';
-import { Bird, Icon } from '../common/Icon';
+import { Icon } from '../common/Icon';
 import { useSheet, useToast } from '../common/overlay';
 import { SubHeader } from '../trip/SubHeader';
 import { useTrip } from '../trip/TripContext';
@@ -21,7 +21,7 @@ export function SettleView() {
 
   const pick = (ids: string[] = []) => {
     setSelection(new Set(ids));
-    router.push(path('list'));
+    router.push(path());
   };
 
   async function run(fn: () => Promise<unknown>) {
@@ -43,7 +43,7 @@ export function SettleView() {
     run(async () => {
       const ok = await sheet.confirm({
         title: redo ? '취소하고 다시 만들까요?' : '정산 요청을 취소할까요?',
-        body: redo ? '기존 요청은 취소되고, 같은 내역이 선택된 상태로 지출 내역 화면으로 이동해요.' : '취소한 요청은 목록에 취소됨으로 남아요.',
+        body: redo ? '기존 요청은 취소되고, 같은 내역이 선택된 상태로 지출 내역으로 이동해요.' : '취소한 요청은 목록에 취소됨으로 남아요.',
         ok: redo ? '취소하고 다시 만들기' : '요청 취소',
         danger: !redo,
       });
@@ -116,18 +116,15 @@ export function SettleView() {
 
   return (
     <>
-      <SubHeader active="settle" />
+      <SubHeader title="정산 요청" />
       {trip.settlements.length ? (
         trip.settlements.map(card)
       ) : (
-        <div className="empty">
-          <Bird />
-          <p>
-            아직 정산 요청이 없어요.
-            <br />
-            지출 내역에서 정산할 항목을 골라 보세요.
-          </p>
-        </div>
+        <p className="empty">
+          아직 정산 요청이 없어요.
+          <br />
+          지출 내역에서 정산할 항목을 골라 보세요.
+        </p>
       )}
       <button type="button" className="btn primary block" onClick={() => pick()}>
         내역에서 골라 정산 요청하기

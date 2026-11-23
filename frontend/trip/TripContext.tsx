@@ -7,7 +7,7 @@ import type { Trip, TripCategory } from '@/shared/domain';
 import { api } from '../common/api';
 import { forgetMe, loadMe, rememberTrip, saveMe } from '../user/userService';
 
-export type View = 'record' | 'list' | 'settle';
+export type View = 'record' | 'settle';
 
 interface TripState {
   trip: Trip;
