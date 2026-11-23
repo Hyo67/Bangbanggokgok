@@ -487,12 +487,12 @@ button:disabled { cursor: not-allowed; opacity: 0.4; }
 /* ---------- 첫 화면 ---------- */
 
 .landing { display: flex; flex-direction: column; gap: 14px; padding: 0 20px 32px; }
-.hero { position: relative; padding: calc(36px + env(safe-area-inset-top)) 4px 8px; }
+.hero { position: relative; padding: calc(36px + env(safe-area-inset-top)) 4px 0; }
 .brand { font-size: 30px; font-weight: 600; letter-spacing: -0.03em; }
 .tagline { margin-top: 6px; font-size: 14px; color: var(--ink-2); }
-.landing .card.rec-form { position: relative; margin-top: 44px; padding: 16px; border-radius: var(--r-lg); }
+.landing .card.rec-form { position: relative; margin-top: 2px; padding: 16px; border-radius: var(--r-lg); }
 /* bird.svg는 아래쪽 10.3%가 빈 공간이라 그만큼 내려 발이 카드 윗변에 닿게 한다. */
-.landing .rec-form > .bird { position: absolute; right: 32px; bottom: calc(100% - 76px * 0.103); width: 76px; pointer-events: none; }
+.landing .rec-form > .bird { position: absolute; right: 28px; bottom: calc(100% - 54px * 0.103); width: 54px; pointer-events: none; }
 .landing .card .field { background: var(--white); }
 .landing .card .btn.ghost { background: transparent; }
 .recent { display: grid; gap: 6px; }
