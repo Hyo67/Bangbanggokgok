@@ -36,6 +36,13 @@ export function ExpenseHistory() {
   const allKrw = sum(byCat.map((x) => x.krw));
   const picked = selection ? trip.expenses.filter((e) => selection.has(e.expenseId)) : [];
 
+  // 취소되지 않은 정산 요청에 들어간 지출의 상태. 모든 대상이 보냄을 확인하면 정산이 COMPLETED가 된다.
+  const settledStatus = new Map<string, 'PENDING' | 'COMPLETED'>();
+  for (const st of trip.settlements) {
+    if (st.status === 'CANCELLED') continue;
+    for (const it of st.selectedExpenses) settledStatus.set(it.expenseId, st.status);
+  }
+
   const edit = (id: string) => sheet.open((close) => <ExpenseEditSheet id={id} close={close} />);
 
   function toggle(id: string) {
@@ -117,11 +124,13 @@ export function ExpenseHistory() {
     const isPicked = selection?.has(e.expenseId) ?? false;
     // 이미 정산 요청에 들어간 내역은 다시 고를 수 없다.
     const locked = Boolean(selection) && e.isSettled;
+    const status = e.isSettled ? settledStatus.get(e.expenseId) : undefined;
+    const done = status === 'COMPLETED';
     const look = categoryLook(categoryOf(e.categoryId));
     return (
       <li
         key={e.expenseId}
-        className={`exp ${isPicked ? 'picked' : ''} ${locked ? 'locked' : ''}`}
+        className={`exp ${isPicked ? 'picked' : ''} ${locked ? 'locked' : ''} ${done ? 'done' : ''}`}
         tabIndex={locked ? -1 : 0}
         role={selection ? 'checkbox' : undefined}
         aria-checked={selection ? isPicked : undefined}
@@ -136,7 +145,7 @@ export function ExpenseHistory() {
         <div className="exp-main">
           <strong>
             {e.caption}
-            {e.isSettled && <span className="badge">정산 요청됨</span>}
+            {status && <span className={`badge ${status.toLowerCase()}`}>{done ? '정산 완료' : '정산 요청됨'}</span>}
           </strong>
           <small>
             {e.currency === 'KRW' ? '원화 결제' : localMoney(trip, e.amount, e.currency)} · {memberName(e.memberId)}

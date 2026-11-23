@@ -9,14 +9,14 @@ import { useTrip } from './TripContext';
 export function SubHeader({ title }: { title: string }) {
   const { trip, path } = useTrip();
   return (
-    <header className="sub-head">
-      <Link className="round" href={path()} aria-label="지출 기록으로 돌아가기">
-        <Icon name="back" />
-      </Link>
-      <h1>
-        <small>{trip.title}</small>
-        {title}
-      </h1>
+    <header className="rec-head">
+      <div className="top-bar">
+        <Link className="round" href={path()} aria-label="지출 기록으로 돌아가기">
+          <Icon name="back" size={20} />
+        </Link>
+      </div>
+      <h1 className="trip-title">{title}</h1>
+      <p className="trip-dates">{trip.title}</p>
     </header>
   );
 }

@@ -73,23 +73,23 @@ export function RecordView() {
   return (
     <>
       <header className="rec-head">
-        <Link className="round" href="/" aria-label="여행방 만들기로 돌아가기" title="여행방 만들기">
-          <Icon name="back" />
-        </Link>
-        <div className="rec-title">
-          <button type="button" className="trip-title" onClick={() => sheet.open((close) => <TripInfoSheet close={close} />)}>
-            {trip.title} <Icon name="down" size={16} />
+        <div className="top-bar">
+          <Link className="round" href="/" aria-label="여행방 만들기로 돌아가기" title="여행방 만들기">
+            <Icon name="back" size={20} />
+          </Link>
+          <Link className="round" href={path('settle')} aria-label="정산 요청 보기" title="정산 요청">
+            <Icon name="receipt" size={20} />
+          </Link>
+          <button type="button" className="round" onClick={() => copyShareLink(trip, toast)} aria-label="초대 링크 복사" title="초대 링크 복사">
+            <Icon name="link" size={20} />
           </button>
-          <p className="trip-dates">
-            {fmtDate(trip.startDate)} - {fmtDate(trip.endDate)} · {currencyOf(trip.currencyCode).nationName}
-          </p>
         </div>
-        <Link className="round" href={path('settle')} aria-label="정산 요청 보기" title="정산 요청">
-          <Icon name="receipt" />
-        </Link>
-        <button type="button" className="round" onClick={() => copyShareLink(trip, toast)} aria-label="초대 링크 복사" title="초대 링크 복사">
-          <Icon name="link" />
+        <button type="button" className="trip-title" onClick={() => sheet.open((close) => <TripInfoSheet close={close} />)}>
+          {trip.title} <Icon name="down" size={18} />
         </button>
+        <p className="trip-dates">
+          {fmtDate(trip.startDate)} - {fmtDate(trip.endDate)} · {currencyOf(trip.currencyCode).nationName}
+        </p>
       </header>
       {trip.fixedExchangeRate == null && (
         <div className="banner">
