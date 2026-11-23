@@ -69,7 +69,6 @@ export function LandingView() {
   return (
     <main className="landing">
       <div className="hero">
-        <Bird />
         <h1 className="brand">방방곡곡</h1>
         <p className="tagline">
           친구들과 함께 쓰는 여행 가계부.
@@ -78,6 +77,8 @@ export function LandingView() {
         </p>
       </div>
       <form className="card rec-form" noValidate onSubmit={create}>
+        {/* 까치가 카드 윗변에 올라서 있다. */}
+        <Bird />
         <label className="field">
           <span className="field-ic">
             <Icon name="pencil" />
