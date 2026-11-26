@@ -76,12 +76,21 @@ export interface Expense {
   date: string; // YYYY-MM-DD
   memo: string;
   createdAt: string;
+  exchangeRate: number | null; // 실시간 환율로 기록했을 때의 환율. null이면 여행방 고정 환율을 쓴다.
   isSettled: boolean; // 진행 중이거나 끝난 정산 요청에 포함됐는지
 }
 
-// 고정 환율로 원화 환산. 환율이 아직 저장되지 않았으면 null.
-export const convertToKRW = (trip: Pick<Trip, 'fixedExchangeRate'>, e: Pick<Expense, 'amount' | 'currency'>): number | null =>
-  e.currency === 'KRW' ? Math.round(e.amount) : trip.fixedExchangeRate == null ? null : Math.round(e.amount * trip.fixedExchangeRate);
+type RateSource = Pick<Expense, 'amount' | 'currency'> & { exchangeRate?: number | null };
+
+// 이 지출에 적용할 환율: 지출에 따로 저장한 실시간 환율, 없으면 여행방 고정 환율.
+export const rateOf = (trip: Pick<Trip, 'fixedExchangeRate'>, e: RateSource): number | null => e.exchangeRate ?? trip.fixedExchangeRate;
+
+// 원화 환산. 적용할 환율이 아직 없으면 null.
+export function convertToKRW(trip: Pick<Trip, 'fixedExchangeRate'>, e: RateSource): number | null {
+  if (e.currency === 'KRW') return Math.round(e.amount);
+  const rate = rateOf(trip, e);
+  return rate == null ? null : Math.round(e.amount * rate);
+}
 
 /* ---------- Settlement ---------- */
 

@@ -2,11 +2,12 @@
 
 // 지출 기록 화면과 수정 시트가 함께 쓰는 입력 필드
 
-import type { ChangeEvent, ReactNode } from 'react';
-import type { Expense, Trip, TripCategory } from '@/shared/domain';
+import { useState, type ChangeEvent, type ReactNode } from 'react';
+import type { Currency, Expense, Trip, TripCategory } from '@/shared/domain';
+import { api, errorText } from '../common/api';
 import { Icon } from '../common/Icon';
-import { fmtDate, parseAmount, rateText, won } from '../common/format';
-import { useSheet } from '../common/overlay';
+import { fmtDate, parseAmount, rateLabel, won } from '../common/format';
+import { useSheet, useToast } from '../common/overlay';
 import { CategorySheet } from '../trip/CategorySheet';
 import { useTrip } from '../trip/TripContext';
 
@@ -19,9 +20,26 @@ export interface ExpenseDraft {
   date: string;
   memberId: string; // 지출한 사람
   memo: string;
+  // fixed: 여행방 고정 환율, live: 방금 조회한 실시간 환율(liveRate), keep: 수정할 때 저장된 환율을 그대로 둠
+  rateMode: 'fixed' | 'live' | 'keep';
+  liveRate: number | null;
 }
 
-export const draftOf = (e: Expense): ExpenseDraft => ({ ...e, amount: String(e.amount) });
+export const draftOf = (e: Expense): ExpenseDraft => ({
+  caption: e.caption,
+  amount: String(e.amount),
+  currency: e.currency,
+  categoryId: e.categoryId,
+  date: e.date,
+  memberId: e.memberId,
+  memo: e.memo,
+  rateMode: 'keep',
+  liveRate: e.exchangeRate,
+});
+
+// 입력 중인 지출에 적용될 환율. 실시간 환율을 쓰는 중이 아니면 여행방 고정 환율.
+const usesLive = (d: ExpenseDraft) => d.rateMode !== 'fixed' && d.liveRate != null;
+const draftRate = (trip: Trip, d: ExpenseDraft) => (usesLive(d) ? d.liveRate : trip.fixedExchangeRate);
 
 // FR-2.3: 이 여행방에서 많이 쓴 카테고리를 앞쪽에 둔다. 횟수가 같으면 카테고리 순서(sortOrder)를 따른다.
 export function sortedCategories(trip: Trip): TripCategory[] {
@@ -30,9 +48,18 @@ export function sortedCategories(trip: Trip): TripCategory[] {
   return [...trip.categories].sort((a, b) => (used.get(b.categoryId) ?? 0) - (used.get(a.categoryId) ?? 0) || a.sortOrder - b.sortOrder);
 }
 
-type Validated =
-  | { value: Omit<ExpenseDraft, 'amount' | 'categoryId'> & { amount: number; categoryId: string } }
-  | { error: string; focus: string };
+interface ExpenseBody {
+  caption: string;
+  amount: number;
+  currency: string;
+  categoryId: string;
+  date: string;
+  memberId: string;
+  memo: string;
+  exchangeRate?: number | null; // 빠지면 서버가 저장된 환율을 그대로 둔다(수정할 때)
+}
+
+type Validated = { value: ExpenseBody } | { error: string; focus: string };
 
 // 제출 가능한 값이면 서버로 보낼 객체를, 아니면 안내 문구와 포커스할 필드를 돌려준다.
 export function validateDraft(trip: Trip, v: ExpenseDraft): Validated {
@@ -40,23 +67,59 @@ export function validateDraft(trip: Trip, v: ExpenseDraft): Validated {
   if (!v.caption.trim()) return { error: '어디에 썼는지 적어 주세요.', focus: 'caption' };
   if (!(amount > 0)) return { error: '금액을 숫자로 입력해 주세요.', focus: 'amount' };
   if (!v.date) return { error: '날짜를 선택해 주세요.', focus: 'date' };
-  return { value: { ...v, amount, categoryId: v.categoryId ?? sortedCategories(trip)[0].categoryId } };
+  const { rateMode, liveRate, ...rest } = v;
+  const value: ExpenseBody = { ...rest, amount, categoryId: v.categoryId ?? sortedCategories(trip)[0].categoryId };
+  if (v.currency === 'KRW' || rateMode === 'fixed') value.exchangeRate = null;
+  else if (rateMode === 'live') value.exchangeRate = liveRate;
+  return { value };
 }
 
-// 현지 통화 금액 아래에 고정 환율 기준 원화 환산을 바로 보여 준다.
-function Hint({ trip, draft }: { trip: Trip; draft: ExpenseDraft }) {
+// 금액 아래에 적용 환율과 원화 환산을 보여 준다. 기본은 고정 환율이고, 버튼으로 실시간 환율을 조회해 쓸 수 있다.
+function Hint({ trip, draft, onChange }: { trip: Trip; draft: ExpenseDraft; onChange(next: ExpenseDraft): void }) {
+  const toast = useToast();
+  const [loading, setLoading] = useState(false);
+  if (draft.currency === 'KRW') return <p className="hint">원화로 결제한 금액은 그대로 기록돼요.</p>;
+
   const amount = parseAmount(draft.amount);
+  const live = usesLive(draft);
+  const rate = draftRate(trip, draft);
+
+  async function useLiveRate() {
+    setLoading(true);
+    try {
+      const data = await api<{ currency: Currency & { currencyRate: number } }>('GET', `/api/rates/${trip.currencyCode}`);
+      onChange({ ...draft, rateMode: 'live', liveRate: data!.currency.currencyRate });
+    } catch (err) {
+      toast(errorText(err));
+    } finally {
+      setLoading(false);
+    }
+  }
+
   let body: ReactNode;
-  if (draft.currency === 'KRW') body = '원화로 결제한 금액은 그대로 기록돼요.';
-  else if (trip.fixedExchangeRate == null) body = '고정 환율이 아직 없어 원화 환산은 나중에 표시돼요.';
-  else if (amount > 0)
+  if (rate == null) body = '고정 환율이 아직 없어 원화 환산은 나중에 표시돼요.';
+  else
     body = (
       <>
-        <b>≈ {won(amount * trip.fixedExchangeRate)}</b> · {rateText(trip)}
+        {amount > 0 && <b>≈ {won(amount * rate)} · </b>}
+        {rateLabel(trip.currencyCode, rate)} · {live ? '실시간 환율' : '고정 환율'}
       </>
     );
-  else body = `${rateText(trip)} · 고정 환율`;
-  return <p className="hint">{body}</p>;
+  return (
+    <div className="hint rate-hint">
+      <p>{body}</p>
+      {live ? (
+        <button type="button" className="rate-btn" onClick={() => onChange({ ...draft, rateMode: 'fixed' })}>
+          고정 환율로
+        </button>
+      ) : (
+        <button type="button" className="rate-btn" disabled={loading} onClick={useLiveRate}>
+          <Icon name="refresh" size={12} />
+          {loading ? '조회 중' : '실시간 환율로'}
+        </button>
+      )}
+    </div>
+  );
 }
 
 // 회색 카드 하나에 입력을 모은다: 위쪽 카테고리 칩, 가운데 큰 항목·금액, 아래쪽 작은 날짜·지출자·메모
@@ -118,7 +181,7 @@ export function ExpenseFields({ draft, onChange }: { draft: ExpenseDraft; onChan
           onChange={set('amount')}
         />
       </div>
-      <Hint trip={trip} draft={draft} />
+      <Hint trip={trip} draft={draft} onChange={onChange} />
       <div className="meta">
         <label className="mini">
           <Icon name="calendar" size={15} />

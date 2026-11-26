@@ -103,7 +103,7 @@ export function TripInfoSheet({ close, created = false }: { close(): void; creat
           </dd>
         </div>
       </dl>
-      <p className="fine">지출 환산과 정산에는 여행방을 만들 때 고정한 환율을 써요. 실시간 환율은 참고용이에요.</p>
+      <p className="fine">지출 환산과 정산에는 기본으로 여행방을 만들 때 고정한 환율을 써요. 지출을 기록할 때 '실시간 환율로'를 누르면 그 지출만 지금 환율로 저장돼요.</p>
       <h3>멤버 {trip.members.length}명</h3>
       <div className="chips">
         {trip.members.map((m) => (

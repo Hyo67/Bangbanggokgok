@@ -30,6 +30,8 @@ export function RecordView() {
     date: today(),
     memberId: '',
     memo: '',
+    rateMode: 'fixed',
+    liveRate: null,
   }));
 
   // 지출한 사람의 기본값은 나. 고른 멤버가 없어지면 다시 나로 돌린다.
@@ -59,8 +61,8 @@ export function RecordView() {
     setBusy(true);
     try {
       await mutate('POST', '/expenses', checked.value);
-      // 연달아 입력하기 쉽도록 통화·날짜·지출한 사람은 남겨 둔다.
-      setDraft((d) => ({ ...d, caption: '', amount: '', categoryId: null, memo: '' }));
+      // 연달아 입력하기 쉽도록 통화·날짜·지출한 사람은 남겨 두고, 환율은 다시 고정 환율로 돌린다.
+      setDraft((d) => ({ ...d, caption: '', amount: '', categoryId: null, memo: '', rateMode: 'fixed', liveRate: null }));
       (form.current?.elements.namedItem('caption') as HTMLElement | null)?.focus();
       toast('지출을 추가했어요');
     } catch (err) {

@@ -54,7 +54,7 @@ select json_build_object(
     select json_agg(json_build_object(
              'expenseId', e.expense_id, 'tripId', e.trip_id, 'memberId', e.member_id, 'categoryId', e.category_id,
              'caption', e.caption, 'amount', e.amount, 'currency', e.currency, 'date', e.spent_on::text,
-             'memo', e.memo, 'createdAt', e.created_at,
+             'memo', e.memo, 'createdAt', e.created_at, 'exchangeRate', e.exchange_rate,
              'isSettled', exists (
                select 1 from settlement_expenses se join settlements s on s.settlement_id = se.settlement_id
                 where se.expense_id = e.expense_id and s.status <> 'CANCELLED'))

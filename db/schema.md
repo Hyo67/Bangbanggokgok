@@ -87,8 +87,9 @@ erDiagram
 | `memo` | text | NO | `''` | 0~200자 (CHECK) |
 | `position` | integer | NO | | 지출 내역 화면의 표시 순서 (작을수록 위) |
 | `created_at` | timestamptz | NO | `clock_timestamp()` | |
+| `exchange_rate` | numeric | YES | | 실시간 환율로 기록한 지출의 환율 (> 0, CHECK). NULL이면 여행방 고정 환율로 환산 |
 
-- 제약: `expenses_pkey (expense_id)`, `expenses_trip_id_fkey`, `expenses_member_id_fkey`, `expenses_category_id_fkey`, `expenses_amount_check`, `expenses_caption_check`, `expenses_memo_check`
+- 제약: `expenses_pkey (expense_id)`, `expenses_trip_id_fkey`, `expenses_member_id_fkey`, `expenses_category_id_fkey`, `expenses_amount_check`, `expenses_caption_check`, `expenses_memo_check`, `expenses_exchange_rate_check`
 - 인덱스: `expenses_pkey`, `expenses_trip_idx (trip_id, position)`, `expenses_member_idx (member_id)`, `expenses_category_idx (category_id)`
 
 ### settlements — 정산 요청 (Settlement)
@@ -232,6 +233,7 @@ erDiagram
 | createdAt : LocalDateTime | `created_at` timestamptz | 🔁 시간대 포함 타입 |
 | isSettled : Boolean | — | ➖ `settlement_expenses` ⨝ `settlements(status ≠ CANCELLED)`에 있는지로 계산한다 |
 | — | `currency`, `spent_on`, `memo`, `position` | ➕ |
+| — | `exchange_rate` | ➕ 지출별 실시간 환율. `convertToKRW`는 이 값, 없으면 `trips.fixed_exchange_rate`로 환산한다 |
 | createExpense / updateExpense / deleteExpense / convertToKRW | 서비스·공용 코드 | ✅ |
 
 ### Settlement ↔ `settlements` + `settlement_expenses`
@@ -266,7 +268,7 @@ erDiagram
 | --- | --- | --- |
 | Currency 클래스 (currencyCode, nationName, currencyRate) | **DB 테이블 없음** | ➖ 지원 통화 15개는 코드 상수 `CURRENCIES`(`shared/domain.ts`)에 있다. currencyRate는 네이버 환율 검색으로 실시간 조회한다 |
 | Trip 0..* — 1 Currency | `trips.currency_code` | ➖ 외래 키도 CHECK도 없다. 서버가 `CURRENCIES`에 있는 코드인지 검사한다 |
-| currencyRate | `trips.fixed_exchange_rate` | 🔁 통화별 최신 환율을 저장하지 않고, 여행방마다 생성 시점 환율만 고정한다 (FR-3.1) |
+| currencyRate | `trips.fixed_exchange_rate`, `expenses.exchange_rate` | 🔁 통화별 최신 환율을 저장하지 않는다. 여행방마다 생성 시점 환율을 고정하고(FR-3.1), 사용자가 고른 지출만 기록 시점 실시간 환율을 따로 저장한다 |
 | ExchangeRateService.fetchRate(nationName) | `backend/currency/exchangeRateService.ts` (네이버 환율 검색, 1분 캐시) | ✅ |
 
 ### 다중성(multiplicity)
@@ -297,5 +299,6 @@ erDiagram
 | --- | --- |
 | 2026-11-19 | 외래 키 조회용 인덱스 4개 추가: `expenses_member_idx`, `expenses_category_idx`, `settlements_requester_idx`, `settlement_targets_member_idx`. 멤버 나가기·카테고리 삭제 때 전체 스캔하던 문제를 없앰 |
 | 2026-11-19 | `anon`·`authenticated`의 테이블 권한(TRUNCATE·TRIGGER·REFERENCES) 회수, 기본 권한도 회수 |
+| 2026-11-26 | `expenses.exchange_rate` 추가 (NULL 허용). 지출을 기록할 때 '실시간 환율로'를 고르면 그때 조회한 환율을 저장한다 |
 
 남은 선택 사항: `trips.currency_code`는 아직 서버 검증에만 의존한다. `CHECK (currency_code in (...))` 제약을 걸거나, `currencies` 테이블을 만들고 FK를 거는 방법이 있다.

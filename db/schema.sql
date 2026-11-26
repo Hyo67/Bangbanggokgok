@@ -48,8 +48,11 @@ create table if not exists expenses (
   spent_on    date not null,
   memo        text not null default '' check (char_length(memo) <= 200),
   position    integer not null,                                    -- 지출 내역 화면의 표시 순서
-  created_at  timestamptz not null default clock_timestamp()
+  created_at  timestamptz not null default clock_timestamp(),
+  exchange_rate numeric check (exchange_rate > 0)                   -- 실시간 환율로 기록한 지출만. null이면 여행방 고정 환율
 );
+-- 이미 만들어진 DB에는 열을 덧붙인다.
+alter table expenses add column if not exists exchange_rate numeric check (exchange_rate > 0);
 create index if not exists expenses_trip_idx on expenses (trip_id, position);
 -- 멤버 나가기·카테고리 삭제 때 "쓰는 지출이 있는지"를 찾는 외래 키 조회용
 create index if not exists expenses_member_idx on expenses (member_id);

@@ -15,8 +15,16 @@ const mutate = async (tripId: string, fn: (tx: Sql, trip: TripRef) => Promise<vo
 async function selectExpenses(tx: Sql, trip: TripRef, expenseIds: string[]): Promise<SelectedExpense[]> {
   const ids = [...new Set(expenseIds)];
   if (ids.length === 0) throw new HttpError(400, '정산할 내역을 선택해 주세요.');
-  const rows = await tx.query<{ expense_id: string; caption: string; amount: string; currency: string; date: string; settled: boolean }>(
-    `select e.expense_id, e.caption, e.amount, e.currency, e.spent_on::text as date,
+  const rows = await tx.query<{
+    expense_id: string;
+    caption: string;
+    amount: string;
+    currency: string;
+    exchange_rate: string | null;
+    date: string;
+    settled: boolean;
+  }>(
+    `select e.expense_id, e.caption, e.amount, e.currency, e.exchange_rate, e.spent_on::text as date,
             exists (select 1 from settlement_expenses se join settlements s on s.settlement_id = se.settlement_id
                      where se.expense_id = e.expense_id and s.status <> 'CANCELLED') as settled
        from expenses e
@@ -28,7 +36,8 @@ async function selectExpenses(tx: Sql, trip: TripRef, expenseIds: string[]): Pro
     if (!e) throw new HttpError(409, '선택한 내역 중 삭제된 항목이 있어요. 다시 선택해 주세요.');
     if (e.settled) throw new HttpError(409, `'${e.caption}'은(는) 이미 정산 요청에 들어간 내역이에요.`);
     const amount = Number(e.amount);
-    const krw = convertToKRW(trip, { amount, currency: e.currency });
+    const exchangeRate = e.exchange_rate == null ? null : Number(e.exchange_rate);
+    const krw = convertToKRW(trip, { amount, currency: e.currency, exchangeRate });
     if (krw == null) throw new HttpError(409, '고정 환율이 저장된 뒤에 정산을 요청할 수 있어요.');
     return { expenseId: e.expense_id, caption: e.caption, amount, currency: e.currency, date: e.date, krw };
   });

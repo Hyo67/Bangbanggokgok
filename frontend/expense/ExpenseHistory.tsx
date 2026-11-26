@@ -22,7 +22,7 @@ export function ExpenseHistory() {
 
   const shown = trip.expenses.filter((e) => filter === 'all' || e.categoryId === filter);
   const krwOf = (e: Expense) => convertToKRW(trip, e) ?? 0;
-  const pending = trip.fixedExchangeRate == null && shown.some((e) => e.currency !== 'KRW');
+  const pending = shown.some((e) => convertToKRW(trip, e) == null);
   const totalLocal = sum(shown.filter((e) => e.currency !== 'KRW').map((e) => e.amount));
 
   // 날짜는 최신순, 같은 날짜 안에서는 여행방에 저장된 순서를 따른다.
@@ -149,6 +149,7 @@ export function ExpenseHistory() {
           </strong>
           <small>
             {e.currency === 'KRW' ? '원화 결제' : localMoney(trip, e.amount, e.currency)} · {memberName(e.memberId)}
+            {e.currency !== 'KRW' && e.exchangeRate != null && ` · 실시간 ${e.exchangeRate.toLocaleString('ko-KR', { maximumSignificantDigits: 4 })}원`}
           </small>
         </div>
         <b className={`exp-krw ${krw == null ? 'muted' : ''}`}>{krw == null ? '환율 미확정' : won(krw)}</b>

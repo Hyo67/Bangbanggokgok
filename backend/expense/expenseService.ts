@@ -31,25 +31,38 @@ async function parseExpense(tx: Sql, trip: TripRef, body: Body) {
   };
 }
 
+// 지출별 실시간 환율. 원화 지출이면 쓰지 않는다.
+// undefined: 지금 값 유지(수정할 때만), null: 여행방 고정 환율, 숫자: 화면에서 조회한 실시간 환율
+function parseRate(body: Body): number | null | undefined {
+  if (body.currency === 'KRW') return null;
+  if (body.exchangeRate === undefined) return undefined;
+  if (body.exchangeRate === null) return null;
+  const rate = Number(body.exchangeRate);
+  if (!Number.isFinite(rate) || rate <= 0 || rate > 1e6) throw new HttpError(400, '환율이 올바르지 않아요.');
+  return rate;
+}
+
 export const createExpense = (tripId: string, body: Body) =>
   mutate(tripId, async (tx, trip) => {
     const e = await parseExpense(tx, trip, body);
     // 새 내역은 목록 맨 위에 둔다.
     await tx.query(
-      `insert into expenses (expense_id, trip_id, member_id, category_id, caption, amount, currency, spent_on, memo, position)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9,
+      `insert into expenses (expense_id, trip_id, member_id, category_id, caption, amount, currency, spent_on, memo, exchange_rate, position)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
                (select coalesce(min(position), 0) - 1 from expenses where trip_id = $2))`,
-      [newId(), tripId, e.memberId, e.categoryId, e.caption, e.amount, e.currency, e.date, e.memo],
+      [newId(), tripId, e.memberId, e.categoryId, e.caption, e.amount, e.currency, e.date, e.memo, parseRate(body) ?? null],
     );
   });
 
 export const updateExpense = (tripId: string, expenseId: string, body: Body) =>
   mutate(tripId, async (tx, trip) => {
     const e = await parseExpense(tx, trip, body);
+    const rate = parseRate(body);
     const rows = await tx.query(
-      `update expenses set member_id = $3, category_id = $4, caption = $5, amount = $6, currency = $7, spent_on = $8, memo = $9
+      `update expenses set member_id = $3, category_id = $4, caption = $5, amount = $6, currency = $7, spent_on = $8, memo = $9,
+              exchange_rate = case when $10::text = 'keep' then exchange_rate else $11::numeric end
         where trip_id = $1 and expense_id = $2 returning 1`,
-      [tripId, expenseId, e.memberId, e.categoryId, e.caption, e.amount, e.currency, e.date, e.memo],
+      [tripId, expenseId, e.memberId, e.categoryId, e.caption, e.amount, e.currency, e.date, e.memo, rate === undefined ? 'keep' : 'set', rate ?? null],
     );
     if (rows.length === 0) throw new HttpError(404, '이미 삭제된 내역이에요.');
   });
